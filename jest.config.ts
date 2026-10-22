@@ -10,8 +10,10 @@ const config: Config = {
     "^next/navigation$": "<rootDir>/__mocks__/next-navigation.ts",
   },
   testMatch: ["**/__tests__/**/*.test.ts"],
+  // jose v6 is ESM-only, so it is compiled to CommonJS like our own code
+  transformIgnorePatterns: ["/node_modules/(?!jose/)"],
   transform: {
-    "^.+\\.tsx?$": [
+    "^.+\\.[tj]sx?$": [
       "ts-jest",
       {
         tsconfig: {
@@ -19,6 +21,7 @@ const config: Config = {
           moduleResolution: "node",
           jsx: "react-jsx",
           esModuleInterop: true,
+          allowJs: true,
           paths: {
             "@/*": ["./*"],
           },

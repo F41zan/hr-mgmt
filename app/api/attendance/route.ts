@@ -104,12 +104,14 @@ export async function GET(request: NextRequest) {
       const searchEmployeeIds = employees.map((e) => e._id);
       if (searchEmployeeIds.length > 0) {
         if (query.employeeId) {
-          // Combine with existing employee filter
+          // Combine with existing employee/department filter: keep only
+          // employees matching both (a second $in would overwrite the first)
+          const allowed: mongoose.Types.ObjectId[] = query.employeeId.$in ?? [
+            query.employeeId,
+          ];
+          const allowedSet = new Set(allowed.map((id) => id.toString()));
           query.employeeId = {
-            $in: searchEmployeeIds,
-            ...(query.employeeId.$in
-              ? { $in: query.employeeId.$in }
-              : { $eq: query.employeeId }),
+            $in: searchEmployeeIds.filter((id) => allowedSet.has(id.toString())),
           };
         } else {
           query.employeeId = { $in: searchEmployeeIds };

@@ -12,6 +12,10 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// Every page reads the session cookie, so routes are allowed to block on the
+// server instead of prerendering a static shell (Cache Components migration step).
+export const instant = false;
+
 export const metadata: Metadata = {
   title: "HR Management System",
   description: "Secure HR management for Admin, HR, and Employee roles.",

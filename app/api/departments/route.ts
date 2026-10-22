@@ -79,9 +79,9 @@ export async function GET(req: NextRequest) {
           designationCount,
           headEmployee: dept.headEmployeeId
             ? {
-                id: (dept.headEmployeeId as { _id: unknown })._id.toString(),
-                name: `${(dept.headEmployeeId as { firstName: string }).firstName} ${(dept.headEmployeeId as { lastName: string }).lastName}`,
-                employeeId: (dept.headEmployeeId as { employeeId: string })
+                id: (dept.headEmployeeId as unknown as { _id: { toString(): string } })._id.toString(),
+                name: `${(dept.headEmployeeId as unknown as { firstName: string }).firstName} ${(dept.headEmployeeId as unknown as { lastName: string }).lastName}`,
+                employeeId: (dept.headEmployeeId as unknown as { employeeId: string })
                   .employeeId,
               }
             : null,

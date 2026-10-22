@@ -7,6 +7,7 @@
 import { requireAuth } from "@/lib/dal";
 import NavBar from "@/components/NavBar";
 import ProfileForm from "@/components/account/ProfileForm";
+import ContactDetailsForm from "@/components/account/ContactDetailsForm";
 import Link from "next/link";
 
 export const metadata = { title: "My Profile — HR Management" };
@@ -87,6 +88,11 @@ export default async function ProfilePage() {
 
           {/* Editable: name only */}
           <ProfileForm initialName={session.user.name} />
+        </div>
+
+        {/* Editable: contact details on the linked employee record */}
+        <div className="stat-card mb-4">
+          <ContactDetailsForm />
         </div>
 
         {/* Change password link */}

@@ -77,12 +77,12 @@ export async function GET(
         headEmployee: department.headEmployeeId
           ? {
               id: (
-                department.headEmployeeId as { _id: unknown }
+                department.headEmployeeId as unknown as { _id: { toString(): string } }
               )._id.toString(),
-              name: `${(department.headEmployeeId as { firstName: string }).firstName} ${(department.headEmployeeId as { lastName: string }).lastName}`,
-              employeeId: (department.headEmployeeId as { employeeId: string })
+              name: `${(department.headEmployeeId as unknown as { firstName: string }).firstName} ${(department.headEmployeeId as unknown as { lastName: string }).lastName}`,
+              employeeId: (department.headEmployeeId as unknown as { employeeId: string })
                 .employeeId,
-              email: (department.headEmployeeId as { email: string }).email,
+              email: (department.headEmployeeId as unknown as { email: string }).email,
             }
           : null,
         createdAt: department.createdAt.toISOString(),
@@ -104,7 +104,7 @@ export async function GET(
         employeeId: e.employeeId,
         email: e.email,
         designation: e.designationId
-          ? (e.designationId as { name: string }).name
+          ? (e.designationId as unknown as { name: string }).name
           : "N/A",
       })),
     });

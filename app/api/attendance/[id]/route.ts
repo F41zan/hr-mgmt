@@ -27,13 +27,13 @@ const correctionSchema = z.object({
 // GET single attendance record
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const session = await requireAuth();
     await connectDB();
 
-    const { id } = params;
+    const { id } = await params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json(
@@ -87,14 +87,14 @@ export async function GET(
 // PATCH - Correct attendance
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     // Only Admin/HR can correct attendance
     const session = await requireAnyRole("admin", "hr");
     await connectDB();
 
-    const { id } = params;
+    const { id } = await params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json(

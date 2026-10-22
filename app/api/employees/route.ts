@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { logAudit } from "@/lib/audit";
 import { getVerifiedSession } from "@/lib/dal";
 import { connectDB } from "@/lib/db";
 import Employee from "@/lib/models/Employee";
@@ -89,22 +90,22 @@ export async function GET(req: NextRequest) {
       profilePhoto: emp.profilePhoto || "",
       department: emp.departmentId
         ? {
-            id: (emp.departmentId as { _id: unknown })._id.toString(),
-            name: (emp.departmentId as { name: string }).name,
-            code: (emp.departmentId as { code: string }).code,
+            id: (emp.departmentId as unknown as { _id: { toString(): string } })._id.toString(),
+            name: (emp.departmentId as unknown as { name: string }).name,
+            code: (emp.departmentId as unknown as { code: string }).code,
           }
         : null,
       designation: emp.designationId
         ? {
-            id: (emp.designationId as { _id: unknown })._id.toString(),
-            name: (emp.designationId as { name: string }).name,
+            id: (emp.designationId as unknown as { _id: { toString(): string } })._id.toString(),
+            name: (emp.designationId as unknown as { name: string }).name,
           }
         : null,
       manager: emp.managerId
         ? {
-            id: (emp.managerId as { _id: unknown })._id.toString(),
-            name: `${(emp.managerId as { firstName: string }).firstName} ${(emp.managerId as { lastName: string }).lastName}`,
-            employeeId: (emp.managerId as { employeeId: string }).employeeId,
+            id: (emp.managerId as unknown as { _id: { toString(): string } })._id.toString(),
+            name: `${(emp.managerId as unknown as { firstName: string }).firstName} ${(emp.managerId as unknown as { lastName: string }).lastName}`,
+            employeeId: (emp.managerId as unknown as { employeeId: string }).employeeId,
           }
         : null,
       employmentType: emp.employmentType,
@@ -268,6 +269,15 @@ export async function POST(req: NextRequest) {
       status: "active",
       workLocation: workLocation?.trim() || undefined,
       notes: notes?.trim() || undefined,
+    });
+
+    await logAudit({
+      session,
+      req,
+      action: "employee.create",
+      entity: "Employee",
+      entityId: employee._id.toString(),
+      summary: `Employee ${employee.firstName} ${employee.lastName} (${employee.employeeId}) created`,
     });
 
     return NextResponse.json(

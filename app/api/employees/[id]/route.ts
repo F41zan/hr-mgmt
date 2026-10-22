@@ -5,6 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { logAudit } from "@/lib/audit";
 import { getVerifiedSession } from "@/lib/dal";
 import { connectDB } from "@/lib/db";
 import Employee from "@/lib/models/Employee";
@@ -73,27 +74,27 @@ export async function GET(
         emergencyContact: employee.emergencyContact || null,
         department: employee.departmentId
           ? {
-              id: (employee.departmentId as { _id: unknown })._id.toString(),
-              name: (employee.departmentId as { name: string }).name,
-              code: (employee.departmentId as { code: string }).code,
+              id: (employee.departmentId as unknown as { _id: { toString(): string } })._id.toString(),
+              name: (employee.departmentId as unknown as { name: string }).name,
+              code: (employee.departmentId as unknown as { code: string }).code,
             }
           : null,
         designation: employee.designationId
           ? {
-              id: (employee.designationId as { _id: unknown })._id.toString(),
-              name: (employee.designationId as { name: string }).name,
+              id: (employee.designationId as unknown as { _id: { toString(): string } })._id.toString(),
+              name: (employee.designationId as unknown as { name: string }).name,
               description:
-                (employee.designationId as { description?: string })
+                (employee.designationId as unknown as { description?: string })
                   .description || "",
             }
           : null,
         manager: employee.managerId
           ? {
-              id: (employee.managerId as { _id: unknown })._id.toString(),
-              name: `${(employee.managerId as { firstName: string }).firstName} ${(employee.managerId as { lastName: string }).lastName}`,
-              employeeId: (employee.managerId as { employeeId: string })
+              id: (employee.managerId as unknown as { _id: { toString(): string } })._id.toString(),
+              name: `${(employee.managerId as unknown as { firstName: string }).firstName} ${(employee.managerId as unknown as { lastName: string }).lastName}`,
+              employeeId: (employee.managerId as unknown as { employeeId: string })
                 .employeeId,
-              email: (employee.managerId as { email: string }).email,
+              email: (employee.managerId as unknown as { email: string }).email,
             }
           : null,
         employmentType: employee.employmentType,
@@ -271,6 +272,16 @@ export async function PATCH(
       }
     }
 
+    await logAudit({
+      session,
+      req,
+      action: "employee.update",
+      entity: "Employee",
+      entityId: employee._id.toString(),
+      summary: `Employee ${employee.firstName} ${employee.lastName} (${employee.employeeId}) updated`,
+      details: status ? { status } : undefined,
+    });
+
     return NextResponse.json({
       message: "Employee updated successfully",
       employee: {
@@ -339,6 +350,15 @@ export async function DELETE(
     if (employee.userId) {
       await User.findByIdAndUpdate(employee.userId, { isActive: false });
     }
+
+    await logAudit({
+      session,
+      req,
+      action: "employee.deactivate",
+      entity: "Employee",
+      entityId: employee._id.toString(),
+      summary: `Employee ${employee.firstName} ${employee.lastName} (${employee.employeeId}) deactivated`,
+    });
 
     return NextResponse.json({
       message: "Employee deactivated successfully",

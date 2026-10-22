@@ -9,6 +9,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { logAudit } from "@/lib/audit";
 import { connectDB } from "@/lib/db";
 import User from "@/lib/models/User";
 import { hashPassword, validatePasswordStrength } from "@/lib/password";
@@ -115,6 +116,15 @@ export async function POST(req: NextRequest) {
       passwordHash,
       role: body.role as Role,
       isActive: true,
+    });
+
+    await logAudit({
+      session,
+      req,
+      action: "user.create",
+      entity: "User",
+      entityId: user._id.toString(),
+      summary: `User account created for ${user.email} (${user.role})`,
     });
 
     return NextResponse.json(

@@ -5,6 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { logAudit } from "@/lib/audit";
 import { connectDB } from "@/lib/db";
 import User from "@/lib/models/User";
 import {
@@ -88,6 +89,15 @@ export async function POST(req: NextRequest) {
 
     user.passwordHash = await hashPassword(body.newPassword as string);
     await user.save();
+
+    await logAudit({
+      session,
+      req,
+      action: "auth.password_change",
+      entity: "User",
+      entityId: session.userId,
+      summary: "Changed own password",
+    });
 
     // Invalidate the current session — user must re-login
     await destroySession();

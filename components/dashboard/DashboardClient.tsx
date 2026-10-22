@@ -417,7 +417,7 @@ export default function DashboardClient({ user }: Props) {
             },
             {
               label: "Apply for Leave",
-              href: "/account/profile",
+              href: "/leaves",
               icon: "📝",
               color: "bg-purple-50 border-purple-100 hover:border-purple-300",
               description: "Submit a leave request",
@@ -430,11 +430,11 @@ export default function DashboardClient({ user }: Props) {
               description: "View and edit your profile",
             },
             {
-              label: "Change Password",
-              href: "/account/change-password",
-              icon: "🔒",
+              label: "My Payslips",
+              href: "/my-payslips",
+              icon: "💰",
               color: "bg-yellow-50 border-yellow-100 hover:border-yellow-300",
-              description: "Update your password",
+              description: "Download your payslips",
             },
           ]}
         />
@@ -728,24 +728,31 @@ export default function DashboardClient({ user }: Props) {
             },
             {
               label: "Leave Requests",
-              href: "/admin/dashboard",
+              href: "/leaves",
               icon: "📅",
               color: "bg-yellow-50 border-yellow-100 hover:border-yellow-300",
               description: "Review pending requests",
             },
             {
-              label: "My Profile",
-              href: "/account/profile",
-              icon: "👤",
+              label: "Payroll",
+              href: "/payroll",
+              icon: "💰",
               color: "bg-indigo-50 border-indigo-100 hover:border-indigo-300",
-              description: "View your profile",
+              description: "Run payroll & payslips",
             },
             {
-              label: "Change Password",
-              href: "/account/change-password",
-              icon: "🔒",
+              label: "Recruitment",
+              href: "/recruitment",
+              icon: "🧑‍💼",
+              color: "bg-teal-50 border-teal-100 hover:border-teal-300",
+              description: "Jobs & candidates",
+            },
+            {
+              label: "Reports",
+              href: "/reports",
+              icon: "📊",
               color: "bg-gray-50 border-gray-100 hover:border-gray-300",
-              description: "Update password",
+              description: "Analytics & exports",
             },
           ]}
         />

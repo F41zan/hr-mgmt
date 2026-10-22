@@ -84,3 +84,48 @@ export async function sendPasswordResetEmail(
     };
   }
 }
+
+/** Escape user-supplied text before embedding it in an HTML email. */
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/**
+ * Send a plain notification email (leave updates, interview reminders, payslips).
+ * Returns false when SMTP is not configured. Never throws.
+ */
+export async function sendNotificationEmail(
+  to: string,
+  subject: string,
+  message: string,
+): Promise<boolean> {
+  const transporter = getTransporter();
+  if (!transporter) return false;
+
+  try {
+    await transporter.sendMail({
+      from: process.env.SMTP_FROM ?? process.env.SMTP_USER,
+      to,
+      subject,
+      text: message,
+      html: `
+        <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;">
+          <h2 style="color:#2563EB;">${escapeHtml(subject)}</h2>
+          <p style="white-space:pre-line;">${escapeHtml(message)}</p>
+          <p style="margin-top:24px;color:#64748B;font-size:0.875rem;">HR Management System</p>
+        </div>
+      `,
+    });
+    return true;
+  } catch (err) {
+    console.error(
+      "[hr-mgmt] Failed to send notification email:",
+      (err as Error).message,
+    );
+    return false;
+  }
+}

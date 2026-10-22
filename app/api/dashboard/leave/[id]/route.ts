@@ -1,22 +1,20 @@
 /**
  * PATCH /api/dashboard/leave/[id]
- * Approve or reject a pending leave request. Admin/HR only.
+ * Approve or reject a pending leave request (dashboard quick action).
+ * Requires the leave.approve permission. Shares logic with /api/leaves/[id].
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getVerifiedSession } from "@/lib/dal";
-import { connectDB } from "@/lib/db";
-import Leave from "@/lib/models/Leave";
 import mongoose from "mongoose";
+import { apiGuard } from "@/lib/access";
+import { PERMISSIONS } from "@/lib/permissions";
+import { reviewLeave } from "@/lib/leaveService";
 
 type Params = { params: Promise<{ id: string }> };
 
 export async function PATCH(req: NextRequest, { params }: Params) {
-  const session = await getVerifiedSession();
-  if (!session)
-    return NextResponse.json({ error: "Unauthenticated." }, { status: 401 });
-  if (!["admin", "hr"].includes(session.role))
-    return NextResponse.json({ error: "Forbidden." }, { status: 403 });
+  const guard = await apiGuard(PERMISSIONS.LEAVE_APPROVE);
+  if (guard instanceof NextResponse) return guard;
 
   const { id } = await params;
   if (!mongoose.Types.ObjectId.isValid(id))
@@ -29,30 +27,15 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Invalid body." }, { status: 400 });
   }
 
-  if (!["approved", "rejected"].includes(body.action ?? ""))
+  if (body.action !== "approved" && body.action !== "rejected")
     return NextResponse.json(
       { error: "Action must be 'approved' or 'rejected'." },
       { status: 400 },
     );
 
-  await connectDB();
-  const leave = await Leave.findById(id);
-  if (!leave)
-    return NextResponse.json(
-      { error: "Leave request not found." },
-      { status: 404 },
-    );
-  if (leave.status !== "pending")
-    return NextResponse.json(
-      { error: "Leave request is no longer pending." },
-      { status: 409 },
-    );
+  const result = await reviewLeave(id, body.action, body.notes, guard.session, req);
+  if (!result.ok)
+    return NextResponse.json({ error: result.error }, { status: result.status });
 
-  leave.status = body.action as "approved" | "rejected";
-  leave.reviewedBy = new mongoose.Types.ObjectId(session.userId);
-  leave.reviewedAt = new Date();
-  if (body.notes) leave.reviewNotes = body.notes;
-  await leave.save();
-
-  return NextResponse.json({ success: true, status: leave.status });
+  return NextResponse.json({ success: true, status: result.data.status });
 }

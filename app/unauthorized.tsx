@@ -2,7 +2,7 @@
  * app/unauthorized.tsx
  * Next.js 16 built-in 401 boundary (rendered by unauthorized() calls).
  */
-import Link from "next/link";
+import SignInAgainButton from "@/components/auth/SignInAgainButton";
 
 export default function UnauthorizedPage() {
   return (
@@ -34,9 +34,7 @@ export default function UnauthorizedPage() {
         <p className="text-[var(--color-text-secondary)] mb-6 text-sm">
           You must be signed in to access this page.
         </p>
-        <Link href="/login" className="btn-primary">
-          Sign in
-        </Link>
+        <SignInAgainButton />
       </div>
     </div>
   );

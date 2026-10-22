@@ -205,70 +205,90 @@ export async function seedDemoData() {
     );
 
     // ── Seed 30 days of attendance ────────────────────────────────────────────
-    const STATUSES = [
+    const {
+      getCanonicalAttendanceDate,
+      parseAttendanceDate,
+      calculateLateArrival,
+      calculateEarlyDeparture,
+      calculateWorkingDuration,
+    } = await import("./utils/attendance");
+    // Weighted outcomes for a past working day
+    const OUTCOMES = [
       "present",
       "present",
       "present",
       "present",
       "present",
       "late",
+      "half-day",
       "absent",
-      "on_leave",
     ] as const;
     const attendanceRecords: object[] = [];
+    const pad = (n: number) => String(n).padStart(2, "0");
+    // Wall-clock time on a business date (Asia/Kolkata)
+    const at = (day: string, h: number, m: number) =>
+      new Date(`${day}T${pad(h)}:${pad(m)}:00+05:30`);
 
     for (let d = 29; d >= 0; d--) {
       const date = new Date(now);
       date.setDate(date.getDate() - d);
-      date.setHours(0, 0, 0, 0);
-      const dow = date.getDay();
+      const day = getCanonicalAttendanceDate(date);
+      const dow = new Date(`${day}T12:00:00Z`).getUTCDay();
       if (dow === 0 || dow === 6) continue; // skip weekends
 
       for (const emp of employees) {
         if ((emp as IEmployee).status === "inactive") continue;
-        const roll = Math.random();
-        let status: string;
-        if (d === 0) {
-          // Today: mostly present
-          status =
-            roll < 0.75
+        const outcome =
+          d === 0
+            ? Math.random() < 0.85
               ? "present"
-              : roll < 0.85
-                ? "late"
-                : roll < 0.92
-                  ? "absent"
-                  : "on_leave";
-        } else {
-          status = STATUSES[Math.floor(Math.random() * STATUSES.length)];
-        }
-        const checkIn = new Date(date);
-        checkIn.setHours(
-          status === "late" ? 9 + Math.floor(Math.random() * 2) : 8,
-          Math.floor(Math.random() * 30),
-          0,
-          0,
-        );
-        const checkOut = new Date(date);
-        checkOut.setHours(
-          17 + Math.floor(Math.random() * 2),
-          Math.floor(Math.random() * 30),
-          0,
-          0,
-        );
+              : "late"
+            : OUTCOMES[Math.floor(Math.random() * OUTCOMES.length)];
 
-        attendanceRecords.push({
+        const base = {
           employeeId: (emp as IEmployee)._id,
-          date,
-          status,
-          checkIn: ["present", "late"].includes(status) ? checkIn : undefined,
-          checkOut: ["present", "late"].includes(status) ? checkOut : undefined,
-        });
+          attendanceDate: parseAttendanceDate(day),
+        };
+        if (outcome === "absent") {
+          attendanceRecords.push({ ...base, status: "absent" });
+          continue;
+        }
+
+        const rand = (n: number) => Math.floor(Math.random() * n);
+        const checkInAt =
+          outcome === "late" ? at(day, 9, 10 + rand(45)) : at(day, 8, 30 + rand(29));
+        // Today: checked in only. Half day: leaves around 1 pm.
+        const checkOutAt =
+          d === 0
+            ? undefined
+            : outcome === "half-day"
+              ? at(day, 13, rand(30))
+              : at(day, 18, rand(40));
+        const late = calculateLateArrival(checkInAt);
+        const record: Record<string, unknown> = {
+          ...base,
+          status: outcome === "half-day" ? "half-day" : "present",
+          checkInAt,
+          isLate: late.isLate,
+          lateMinutes: late.lateMinutes,
+        };
+        if (checkOutAt) {
+          const early = calculateEarlyDeparture(checkOutAt);
+          Object.assign(record, {
+            checkOutAt,
+            workingDurationMinutes: calculateWorkingDuration(checkInAt, checkOutAt),
+            isEarlyDeparture: early.isEarlyDeparture,
+            earlyDepartureMinutes: early.earlyDepartureMinutes,
+          });
+        }
+        attendanceRecords.push(record);
       }
     }
 
     if (attendanceRecords.length) {
       await Attendance.insertMany(attendanceRecords, { ordered: false }).catch(
-        () => {},
+        (err: Error) =>
+          console.warn("[hr-mgmt] Some demo attendance skipped:", err.message),
       );
     }
 
@@ -323,6 +343,27 @@ export async function seedDemoData() {
         status: "rejected",
       },
     ]);
+
+    // ── Seed salary structures (so payroll can be run straight away) ─────────
+    const SalaryStructure = (await import("./models/SalaryStructure")).default;
+    await SalaryStructure.insertMany(
+      activeEmps.map((e, i) => {
+        const basic = 30000 + (i % 6) * 7500;
+        return {
+          employeeId: e._id,
+          basic,
+          hra: Math.round(basic * 0.4),
+          specialAllowance: Math.round(basic * 0.25),
+          otherAllowances: 2000,
+          pfPercent: 12,
+          professionalTax: 200,
+          tdsPercent: basic >= 50000 ? 10 : 5,
+          otherDeductions: 0,
+          effectiveFrom: new Date(y, 0, 1),
+        };
+      }),
+      { ordered: false },
+    ).catch(() => {});
 
     console.info("[hr-mgmt] ✓ Demo HR data seeded successfully.");
   } catch (err) {

@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { SafeUser } from "@/lib/models/User";
+import type { Permission } from "@/lib/permissions";
+import NotificationBell from "@/components/notifications/NotificationBell";
 
 interface NavBarProps {
   user: SafeUser;
@@ -21,10 +23,44 @@ const roleBadgeStyle: Record<string, string> = {
   employee: "bg-green-100 text-green-700",
 };
 
+interface NavLink {
+  href: string;
+  label: string;
+  staffOnly?: boolean; // admin + HR
+  employeeOnly?: boolean;
+  permission?: Permission; // shown only with this permission
+  hideWith?: Permission; // hidden when the user has this permission
+}
+
+const isStaff = (role: string) => role === "admin" || role === "hr";
+
+/** Order = display order. Visibility mirrors the server-side checks on each page. */
+const NAV_LINKS: NavLink[] = [
+  { href: "/employees", label: "Employees", staffOnly: true },
+  { href: "/departments", label: "Departments", staffOnly: true },
+  { href: "/attendance", label: "Attendance", staffOnly: true },
+  { href: "/my-attendance", label: "My Attendance", employeeOnly: true },
+  { href: "/leaves", label: "Leave" },
+  { href: "/payroll", label: "Payroll", permission: "payroll.manage" },
+  { href: "/my-payslips", label: "Payslips", hideWith: "payroll.manage" },
+  { href: "/recruitment", label: "Recruitment", permission: "recruitment.manage" },
+  { href: "/reports", label: "Reports", permission: "reports.view" },
+  { href: "/settings", label: "Settings" },
+];
+
 export default function NavBar({ user }: NavBarProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [loggingOut, setLoggingOut] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [permissions, setPermissions] = useState<Permission[] | null>(null);
+
+  useEffect(() => {
+    fetch("/api/settings/permissions?me=true")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { permissions: Permission[] } | null) => setPermissions(d?.permissions ?? []))
+      .catch(() => setPermissions([]));
+  }, []);
 
   async function handleLogout() {
     setLoggingOut(true);
@@ -43,15 +79,31 @@ export default function NavBar({ user }: NavBarProps) {
         ? "/hr/dashboard"
         : "/employee/dashboard";
 
-  const canAccessEmployees = user.role === "admin" || user.role === "hr";
-  const canAccessDepartments = user.role === "admin" || user.role === "hr";
+  const can = (p: Permission) => user.role === "admin" || (permissions ?? []).includes(p);
+  const links = NAV_LINKS.filter((l) => {
+    if (l.staffOnly && !isStaff(user.role)) return false;
+    if (l.employeeOnly && isStaff(user.role)) return false;
+    // Hide permission-dependent links until permissions load (avoids a flash)
+    if ((l.permission || l.hideWith) && permissions === null) return false;
+    if (l.permission && !can(l.permission)) return false;
+    if (l.hideWith && can(l.hideWith)) return false;
+    return true;
+  });
+  const isActive = (href: string) => pathname === href || pathname?.startsWith(`${href}/`);
+
+  const linkClass = (href: string) =>
+    `text-sm transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-primary)] rounded px-2 py-1 whitespace-nowrap ${
+      isActive(href)
+        ? "text-[var(--color-primary)] font-semibold"
+        : "text-[var(--color-text-secondary)] hover:text-[var(--color-primary)]"
+    }`;
 
   return (
-    <nav className="dashboard-nav" aria-label="Main navigation">
+    <nav className="dashboard-nav relative" aria-label="Main navigation">
       {/* Brand */}
       <Link
         href={dashboardHref}
-        className="flex items-center gap-2 font-bold text-[var(--color-text)] text-lg focus-visible:outline-2 focus-visible:outline-[var(--color-primary)] rounded"
+        className="flex items-center gap-2 font-bold text-[var(--color-text)] text-lg focus-visible:outline-2 focus-visible:outline-[var(--color-primary)] rounded shrink-0"
       >
         <svg
           width="28"
@@ -72,41 +124,18 @@ export default function NavBar({ user }: NavBarProps) {
         <span className="hidden sm:inline">HR Management</span>
       </Link>
 
-      {/* Right side */}
-      <div className="flex items-center gap-3">
-        {/* Navigation Links for Admin/HR */}
-        {canAccessEmployees && (
-          <>
-            <Link
-              href="/employees"
-              className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-primary)] rounded px-2 py-1 hidden lg:block"
-            >
-              Employees
-            </Link>
-            <Link
-              href="/departments"
-              className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-primary)] rounded px-2 py-1 hidden lg:block"
-            >
-              Departments
-            </Link>
-            <Link
-              href="/attendance"
-              className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-primary)] rounded px-2 py-1 hidden lg:block"
-            >
-              Attendance
-            </Link>
-          </>
-        )}
-
-        {/* Attendance link for all users */}
-        {user.role === "employee" && (
-          <Link
-            href="/my-attendance"
-            className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-primary)] rounded px-2 py-1 hidden lg:block"
-          >
-            My Attendance
+      {/* Desktop links */}
+      <div className="hidden xl:flex items-center gap-0.5 mx-4 overflow-x-auto">
+        {links.map((l) => (
+          <Link key={l.href} href={l.href} className={linkClass(l.href)}>
+            {l.label}
           </Link>
-        )}
+        ))}
+      </div>
+
+      {/* Right side */}
+      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        <NotificationBell />
 
         {/* Role badge */}
         <span
@@ -116,23 +145,18 @@ export default function NavBar({ user }: NavBarProps) {
         </span>
 
         {/* User name */}
-        <span className="text-sm font-medium text-[var(--color-text)] hidden md:block">
-          {user.name}
-        </span>
-
-        {/* Nav links */}
         <Link
           href="/account/profile"
-          className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-primary)] rounded px-1"
+          className="text-sm font-medium text-[var(--color-text)] hover:text-[var(--color-primary)] hidden md:block"
         >
-          Profile
+          {user.name}
         </Link>
 
         {/* Logout */}
         <button
           onClick={handleLogout}
           disabled={loggingOut}
-          className="btn-secondary text-sm px-3 py-1.5"
+          className="btn-secondary text-sm px-3 py-1.5 hidden sm:inline-flex"
           aria-label="Log out"
         >
           {loggingOut ? (
@@ -144,7 +168,38 @@ export default function NavBar({ user }: NavBarProps) {
             "Log out"
           )}
         </button>
+
+        {/* Mobile menu toggle */}
+        <button
+          className="xl:hidden p-2 rounded-lg text-[var(--color-text-secondary)] hover:bg-[var(--color-primary-light)]"
+          onClick={() => setShowMenu((s) => !s)}
+          aria-expanded={showMenu}
+          aria-label="Toggle menu"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+            {showMenu ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
+          </svg>
+        </button>
       </div>
+
+      {/* Mobile menu */}
+      {showMenu && (
+        <div
+          className="xl:hidden absolute top-full left-0 right-0 bg-white border-b border-[var(--color-primary-border)] shadow-lg z-40 px-4 py-3 grid grid-cols-2 sm:grid-cols-3 gap-1"
+          onClick={(e) => (e.target as HTMLElement).closest("a") && setShowMenu(false)}
+        >
+          <Link href={dashboardHref} className={linkClass(dashboardHref)}>Dashboard</Link>
+          {links.map((l) => (
+            <Link key={l.href} href={l.href} className={linkClass(l.href)}>
+              {l.label}
+            </Link>
+          ))}
+          <Link href="/account/profile" className={linkClass("/account/profile")}>Profile</Link>
+          <button onClick={handleLogout} disabled={loggingOut} className="text-left text-sm text-red-600 px-2 py-1 sm:hidden">
+            {loggingOut ? "Logging out…" : "Log out"}
+          </button>
+        </div>
+      )}
     </nav>
   );
 }

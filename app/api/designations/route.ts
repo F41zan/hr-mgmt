@@ -55,10 +55,10 @@ export async function GET(req: NextRequest) {
           department: designation.departmentId
             ? {
                 id: (
-                  designation.departmentId as { _id: unknown }
+                  designation.departmentId as unknown as { _id: { toString(): string } }
                 )._id.toString(),
-                name: (designation.departmentId as { name: string }).name,
-                code: (designation.departmentId as { code: string }).code,
+                name: (designation.departmentId as unknown as { name: string }).name,
+                code: (designation.departmentId as unknown as { code: string }).code,
               }
             : null,
           createdAt: designation.createdAt.toISOString(),

@@ -8,7 +8,8 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import type { Role } from "@/lib/roles";
 
-const SECRET = new TextEncoder().encode(process.env.JWT_SECRET ?? "");
+/** Read on use (not at import) so the env is always current, e.g. in tests. */
+const getSecret = () => new TextEncoder().encode(process.env.JWT_SECRET ?? "");
 const COOKIE_NAME = "hr_session";
 const SESSION_DURATION_SECONDS = 60 * 60 * 8; // 8 hours
 
@@ -35,7 +36,7 @@ export async function signToken(
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(`${SESSION_DURATION_SECONDS}s`)
-    .sign(SECRET);
+    .sign(getSecret());
 }
 
 /** Verify the token and return the typed payload, or null on any error. */
@@ -43,10 +44,10 @@ export async function verifyToken(
   token: string,
 ): Promise<SessionPayload | null> {
   try {
-    const { payload } = await jwtVerify(token, SECRET, {
+    const { payload } = await jwtVerify(token, getSecret(), {
       algorithms: ["HS256"],
     });
-    return payload as SessionPayload;
+    return payload as unknown as SessionPayload;
   } catch {
     return null;
   }

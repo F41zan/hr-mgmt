@@ -9,6 +9,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { logAudit } from "@/lib/audit";
 import { connectDB } from "@/lib/db";
 import User from "@/lib/models/User";
 import { getVerifiedSession } from "@/lib/dal";
@@ -80,6 +81,16 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       return NextResponse.json({ error: "User not found." }, { status: 404 });
     }
 
+    await logAudit({
+      session,
+      req,
+      action: "user.update",
+      entity: "User",
+      entityId: id,
+      summary: `User account ${user.email} updated`,
+      details: allowedUpdates,
+    });
+
     return NextResponse.json({
       user: {
         id: user._id.toString(),
@@ -99,7 +110,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 }
 
 // ── DELETE (soft-deactivate) ──────────────────────────────────────────────────
-export async function DELETE(_req: NextRequest, { params }: Params) {
+export async function DELETE(req: NextRequest, { params }: Params) {
   const session = await getVerifiedSession();
   if (!session)
     return NextResponse.json({ error: "Unauthenticated." }, { status: 401 });
@@ -130,6 +141,15 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
     if (!user) {
       return NextResponse.json({ error: "User not found." }, { status: 404 });
     }
+
+    await logAudit({
+      session,
+      req,
+      action: "user.deactivate",
+      entity: "User",
+      entityId: id,
+      summary: `User account ${user.email} deactivated`,
+    });
 
     return NextResponse.json({
       message: "Account deactivated.",

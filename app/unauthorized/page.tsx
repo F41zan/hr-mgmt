@@ -3,7 +3,7 @@
  * Regular page at /unauthorized — for middleware redirects.
  * The Next.js 16 special file (app/unauthorized.tsx) handles the 401 boundary.
  */
-import Link from "next/link";
+import SignInAgainButton from "@/components/auth/SignInAgainButton";
 
 export const metadata = { title: "Unauthorised — HR Management" };
 
@@ -37,9 +37,7 @@ export default function UnauthorizedPage() {
         <p className="text-[var(--color-text-secondary)] mb-6 text-sm">
           You must be signed in to access this page.
         </p>
-        <Link href="/login" className="btn-primary">
-          Sign in
-        </Link>
+        <SignInAgainButton />
       </div>
     </div>
   );

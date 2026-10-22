@@ -5,18 +5,14 @@
 
 import mongoose, { Schema, Document, Model } from "mongoose";
 
-export const LEAVE_TYPES = [
-  "annual",
-  "sick",
-  "casual",
-  "unpaid",
-  "maternity",
-  "paternity",
-] as const;
-export type LeaveType = (typeof LEAVE_TYPES)[number];
+import {
+  LEAVE_TYPES,
+  LEAVE_STATUS,
+  type LeaveType,
+  type LeaveStatus,
+} from "@/lib/leavePolicy";
 
-export const LEAVE_STATUS = ["pending", "approved", "rejected"] as const;
-export type LeaveStatus = (typeof LEAVE_STATUS)[number];
+export { LEAVE_TYPES, LEAVE_STATUS, type LeaveType, type LeaveStatus };
 
 export interface ILeave extends Document {
   _id: mongoose.Types.ObjectId;
@@ -25,6 +21,7 @@ export interface ILeave extends Document {
   startDate: Date;
   endDate: Date;
   totalDays: number;
+  isHalfDay?: boolean;
   reason: string;
   status: LeaveStatus;
   reviewedBy?: mongoose.Types.ObjectId; // ref → users (admin/hr who reviewed)
@@ -49,6 +46,7 @@ const leaveSchema = new Schema<ILeave>(
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },
     totalDays: { type: Number, required: true, min: 0.5 },
+    isHalfDay: { type: Boolean, default: false },
     reason: { type: String, required: true, trim: true },
     status: {
       type: String,

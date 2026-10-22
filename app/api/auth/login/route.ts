@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { logAudit } from "@/lib/audit";
 import { connectDB } from "@/lib/db";
 import User from "@/lib/models/User";
 import { verifyPassword } from "@/lib/password";
@@ -74,6 +75,14 @@ export async function POST(req: NextRequest) {
     const passwordValid = await verifyPassword(password, storedHash);
 
     if (!user || !passwordValid) {
+      await logAudit({
+        req,
+        actor: user ? { id: user._id.toString(), name: user.name, role: user.role } : undefined,
+        action: "auth.login_failed",
+        entity: "User",
+        entityId: user?._id.toString(),
+        summary: `Failed sign-in attempt for ${email}`,
+      });
       return NextResponse.json({ error: GENERIC_ERROR }, { status: 401 });
     }
 
@@ -92,6 +101,15 @@ export async function POST(req: NextRequest) {
       userId: user._id.toString(),
       role: user.role,
       isActive: user.isActive,
+    });
+
+    await logAudit({
+      req,
+      actor: { id: user._id.toString(), name: user.name, role: user.role },
+      action: "auth.login",
+      entity: "User",
+      entityId: user._id.toString(),
+      summary: `${user.name} signed in`,
     });
 
     // Update last login timestamp (fire-and-forget)
