@@ -4,7 +4,7 @@
  * Data disappears when this process stops (Ctrl+C).
  *
  *   npm run demo:db
- *   MONGODB_URI=mongodb://127.0.0.1:27017/hr-mgmt npm run dev
+ *   SEED_DEMO_DATA=true MONGODB_URI=mongodb://127.0.0.1:27017/hr-mgmt npm run dev
  */
 
 import { MongoMemoryServer } from "mongodb-memory-server";

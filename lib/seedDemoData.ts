@@ -1,6 +1,7 @@
 /**
  * lib/seedDemoData.ts
- * Seeds realistic demo HR data on first run (when employees collection is empty).
+ * Seeds realistic demo HR data when SEED_DEMO_DATA=true and the employees
+ * collection is empty. Demo accounts use a known password — local demos only.
  * Called automatically from connectDB after connection is established.
  */
 

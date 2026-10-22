@@ -1,6 +1,7 @@
 /**
  * lib/db.ts
- * Singleton MongoDB connection. Auto-seeds admin + demo data on first run.
+ * Singleton MongoDB connection. Auto-seeds the admin (ADMIN_* env) on first
+ * run, and demo data only when SEED_DEMO_DATA=true.
  */
 
 import mongoose from "mongoose";
@@ -30,8 +31,12 @@ export async function connectDB(): Promise<typeof mongoose> {
       .connect(MONGODB_URI, { bufferCommands: false, dbName: "hr-mgmt" })
       .then(async (m) => {
         await seedDefaultAdmin();
-        const { seedDemoData } = await import("./seedDemoData");
-        await seedDemoData();
+        // Demo employees/attendance/salaries (with known demo passwords) are
+        // opt-in only — never seed them into a real database by default.
+        if (process.env.SEED_DEMO_DATA === "true") {
+          const { seedDemoData } = await import("./seedDemoData");
+          await seedDemoData();
+        }
         return m;
       });
   }
