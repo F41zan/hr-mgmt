@@ -6,21 +6,37 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "jest --testPathPattern=__tests__ --passWithNoTests",
+    "test:run": "jest --testPathPattern=__tests__ --passWithNoTests --forceExit",
+    "seed:admin": "npx ts-node --project tsconfig.scripts.json scripts/seed-admin.ts"
   },
   "dependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/nodemailer": "^8.0.2",
+    "bcryptjs": "^3.0.3",
+    "jose": "^6.2.13",
+    "mongoose": "^9.11.3",
     "next": "16.4.2",
+    "nodemailer": "^10.2.0",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",
+    "@types/jest": "^30.0.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^16.5.0",
     "eslint": "^9",
     "eslint-config-next": "16.4.2",
+    "jest": "^30.5.2",
+    "jest-environment-node": "^30.5.2",
     "tailwindcss": "^4",
+    "ts-jest": "^29.4.15",
+    "ts-node": "^10.9.2",
     "typescript": "^5"
   }
 }
